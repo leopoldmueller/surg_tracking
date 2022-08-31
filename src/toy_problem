@@ -1,0 +1,83 @@
+from mimetypes import init
+from turtle import update
+import cv2
+from torchvision.models import resnet50, ResNet50_Weights
+from torchvision.io import read_image
+import os
+from torchsummary import summary
+import torch
+import numpy as np
+from torch import linalg as LA
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from fm_tracker import FM_Tracker
+
+
+def insert_patch(patch, img, pos):
+
+    img[:, pos[0]:pos[0] + patch.size()[1],pos[1]:pos[1] + patch.size()[2]] = patch
+
+    return img
+
+def draw_bounding_box(pane, rect_coordinates):
+    # Show bounding boxes
+
+    # Create figure and axes
+    fig,ax = plt.subplots(1)
+
+    # Display the image
+    ax.imshow(pane)
+
+    colors =['g', 'r']
+
+    # Create a Rectangle patch
+    for i, e in enumerate(rect_coordinates):
+        (x, y, w, h) = e
+        rect = patches.Rectangle((x,y),h,w,linewidth=1,edgecolor=colors[i],facecolor='none')
+        ax.add_patch(rect)
+
+    plt.show()
+
+
+def update_pos(pos, direction, step_length):
+    dir = 1
+    if not direction:
+        dir = -1 
+    pos[0] = pos [0] + dir * step_length
+    pos[1] = pos [1] + dir * step_length
+    return pos
+
+
+def evaluate_tracker(pos=[100,100], patch_size=(40,80), iterations=1000):
+    # Patch initialization
+    patch = torch.zeros(3,patch_size[0],patch_size[1])
+    # Create white image and insert patch
+    init_img = insert_patch(patch, torch.ones(3,500,500), pos)
+    im1 = init_img
+    im2 = init_img
+    bb1 = pos + [patch.size()[1], patch.size()[2]]
+    bb2 = pos + [patch.size()[1], patch.size()[2]]
+
+    tracker = FM_Tracker(im1.permute(1,2,0).numpy(), im2.permute(1,2,0).numpy(), bb1, bb2)
+    
+    i = 0
+    direction = True
+    while i < iterations:
+        if (i % 50 == 0):
+            direction = not direction
+        pos = update_pos(pos, direction, step_length=4)
+        print('--------------POS:   ', pos, i)
+        im1 = insert_patch(patch, torch.ones(3,300,300), pos)
+        im2 = insert_patch(patch, torch.ones(3,300,300), pos)
+        new_bb1, new_bb2 = tracker.tracker_update(im1.permute(1,2,0).numpy(), im2.permute(1,2,0).numpy())
+        coordinates = [new_bb1, pos + [patch.size()[1], patch.size()[2]]]
+        if i%10 == 0:
+            draw_bounding_box(im1.permute(1,2,0), coordinates)
+        i += 1
+
+if __name__ == "__main__":
+    evaluate_tracker()
+
+
+
+    
