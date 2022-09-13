@@ -805,34 +805,6 @@ def calculate_results(config, tracker_type, valid_or_test, is_visualization_off)
         #rank.calculate_N_min_and_N_max() # Used by callenge organizers to get N_min and N_max for each dataset
         eao = rank.calculate_eao_score()
         print_results("\tEAO:{:.3f}".format(eao), stats_case_all)
-        print('hello')
-        # save hyperparameters & performance to csv
-        pd.DataFrame(
-            {
-                "tracker_type": [tracker_type],
-                "model_choice": [config[tracker_type]['model_choice']],
-                "surrounding": [config[tracker_type]['surrounding']],
-                "zero_padding": [config[tracker_type]['zero_padding']],
-                "zero_mapping_size": [config[tracker_type]['zero_mapping_size']],
-                "norm": [config[tracker_type]['norm']],
-                "step_length": [config[tracker_type]['step_length']],
-                "number_candidates": [config[tracker_type]['number_candidates']],
-                "pooling_mode": [config[tracker_type]['pooling_mode']],
-                "pooling_type": [config[tracker_type]['pooling_type']],
-                "time": [datetime.datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %H:%M:%S")],
-                "layer_index": [config[tracker_type]['model_choice']],
-                "eao": [eao],
-                "final_acc": [stats_case_all.acc],
-                "final_rob_2d": [stats_case_all.rob_2d],
-                "final_err_2d": [stats_case_all.err_2d],
-                "final_rob_3d": [stats_case_all.rob_3d],
-                "final_err_3d": [stats_case_all.err_3d] 
-            }
-        ).to_csv(
-            "./results/final_results/results.csv",
-            mode="a",
-            header=not os.path.exists("./results/final_results/results.csv"),
-        )
 
 
 

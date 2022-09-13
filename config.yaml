@@ -5,12 +5,12 @@
 #     zero_mapping_size (int, optional): size of zero map. Defaults to 300.
 #     norm (str, optional): norm to apply to calculate the distance. Defaults to 'cosine'.
 #     step_length (int, optional): number of pixels the bounding box candidates are changes
-#     number_candidates (int, optional): number of candidates to evaluate for each dimension 
+#     number_candidates (int, optional): number of candidates to evaluate for each dimension
 #     pooling_mode (bool, optional): if pooling of similar bounding box candidates should be applied. Defaults to False.
 #     pooling_type (str, optional): which pooling mechanism should be applied. Defaults to 'mirror'.
 # """
 
-search_space: 
+search_space:
     model_choice: ['resnet50']
     surrounding: [0]
     zero_padding: [False]
@@ -23,7 +23,7 @@ search_space:
     layer_index: [-2]
 
 
-fm_csrt_tracker: 
+fm_csrt_tracker:
     model_choice: 'resnet50'
     surrounding: 0
     zero_padding: False
@@ -35,19 +35,19 @@ fm_csrt_tracker:
     pooling_type: "mirror"
     layer_index: -2
 
-fm_tracker: 
+fm_tracker:
     model_choice: 'resnet50'
     surrounding: 0
     zero_padding: False
     zero_mapping_size: 300
     norm: "cosine"
-    step_length: 2
-    number_candidates: 3
+    step_length: 4
+    number_candidates: 1
     pooling_mode: False
     pooling_type: "mirror"
     layer_index: -2
 
-CSRT: 
+CSRT:
     model_choice: '-'
     surrounding: '-'
     zero_padding: '-'
@@ -60,7 +60,7 @@ CSRT:
     layer_index: '-'
 
 # """ ------------ Baseline trackers ---------------
-#     available baseline trackers for benchmarking 
+#     available baseline trackers for benchmarking
 # """
 baseline_tracker:
     ['BOOSTING',
@@ -91,51 +91,51 @@ validation:
                      0,
                     #  50,100,150, 200,
                     # 250
-                     ]], 
+                     ]],
                  "2": [[
                      0,
-                    50,
-                    100,150,
-                    200,250,
-                    300,350,
-                    400,450,
-                    500,550,
-                    600,650,
-                    700,750,800,850,900,950,1000,1050,1100,1150,1200,1250,1300,1350,1400,1450,1500,
-                    1550
+                    # 50,
+                    # 100,150,
+                    # 200,250,
+                    # 300,350,
+                    # 400,450,
+                    # 500,550,
+                    # 600,650,
+                    # 700,750,800,850,900,950,1000,1050,1100,1150,1200,1250,1300,1350,1400,1450,1500,
+                    # 1550
                      ]],
                  "3": [[
                      0,
-                     50,
-                     100,158,
-                     200,250,
-                     300,350,
-                     400
+                    #  50,
+                    #  100,158,
+                    #  200,250,
+                    #  300,350,
+                    #  400
                      ]],
                  "4": [[
                      0,
-                     50,100,
-                     150,200,250,300,
-                     350,400,450,500,
-                     550,600,650,700,
-                     750,
-                     800
+                    #  50,100,
+                    #  150,200,250,300,
+                    #  350,400,450,500,
+                    #  550,600,650,700,
+                    #  750,
+                    #  800
                      ]],
                },
             "case_2":
                {
                  "1": [[
                      0,
-                     50,
-                     100,150,200,250,300,357,400,622,650,
-                     750
+                    #  50,
+                    #  100,150,200,250,300,357,400,622,650,
+                    #  750
                      ]],
                  "2": [[
                      0,
-                     50,
-                     100,
-                     150,200,250,300,350,400,512,550,600,650,700,
-                     750
+                    #  50,
+                    #  100,
+                    #  150,200,250,300,350,400,512,550,600,650,700,
+                    #  750
                      ]],
                  "3": [[
                      0,

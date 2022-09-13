@@ -1,5 +1,4 @@
 from mimetypes import init
-import cv2
 from torchvision.io import read_image
 import os
 import torch
@@ -12,14 +11,9 @@ from xml.etree.ElementTree import TreeBuilder
 import pickle
 import time
 import torchvision.models as models
-
+import torchvision.transforms as T
 
 class FM_Tracker:
-    """This is the best performing tracker brougth to you by
-    - Leopold Müller
-    - Simeon Allmendinger
-    - Lars Böcking
-    """
 
     def __init__(self, init_im1, init_im2, init_bbox1, init_bbox2, config):
         """_summary_
@@ -82,6 +76,9 @@ class FM_Tracker:
 
         self.layer_name = [n for n, _ in self.model.named_children()][self.layer_index]
 
+        self.cuda = torch.cuda.is_available()
+        self.transform = T.Resize(size=(100, 100))
+
         # Set model to evaluation mode
         self.model.eval()
 
@@ -136,8 +133,11 @@ class FM_Tracker:
         getattr(self.model, self.layer_name).register_forward_hook(get_activation(self.layer_name))
         #self.model.avgpool.register_forward_hook(get_activation(self.layer_name))
 
+        # downsample image
+        img = self.transform(img)
+
         # Process image
-        if torch.cuda.is_available():
+        if self.cuda:
             self.model.cuda()(img.float())
         else:
             self.model(img.float())
