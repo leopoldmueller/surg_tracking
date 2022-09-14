@@ -247,8 +247,8 @@ class FM_Tracker:
         return (
             bb[0] - self.surrounding < 0
             or bb[1] - self.surrounding < 0
-            or (bb[0] + bb[2]) + self.surrounding > img.shape[0]
-            or (bb[1] + bb[3]) + self.surrounding > img.shape[1]
+            or (bb[0] + bb[2]) + self.surrounding + 1 > img.shape[0]
+            or (bb[1] + bb[3]) + self.surrounding + 1 > img.shape[1]
         )
 
     # search for next bounding box
