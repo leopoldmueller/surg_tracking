@@ -26,6 +26,9 @@ class FM_Tracker:
             config: reference to the config file from where hyperparameters are extracted
         """
 
+        init_im1 = np.transpose(init_im1, (1, 0, 2))
+        init_im2 = np.transpose(init_im2, (1, 0, 2))
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         # extract the condif hyper parameters
@@ -429,7 +432,9 @@ class FM_Tracker:
           (,v + height) -     .________.
                         v
         """
-
+        new_im1 = np.transpose(new_im1, (1, 0, 2))
+        new_im2 = np.transpose(new_im2, (1, 0, 2))
+        
         # run update for both bounding boxes - left side and right side
         self.latest_bbox1 = self.update_bb(
             image_side=1,
