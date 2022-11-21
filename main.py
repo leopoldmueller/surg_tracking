@@ -21,8 +21,8 @@ def main():
     config = load_yaml_data(args.config)
 
     # Download data (if not downloaded before)
-    if not os.path.exists('data'):
-        download_data(config)
+    #if not os.path.exists('data'):
+    download_data(config)
 
     print('Start FM-Tracker evaluation')
     evaluate_method(config=config, is_visualization_off=True, tracker_type="fm_tracker")
