@@ -1,15 +1,38 @@
 import os
 import sys
+import datetime
+import time
 from src import utils
 from src.fm_tracker import FM_Tracker
 from src.fm_csrt_tracker import FM_CSRT_Tracker
 from src.baseline_tracker import Baseline_Tracker
+import pandas as pd
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
-import time
-import datetime
+
+
+class Timer:
+    def __init__(self):
+        self.time_init = datetime.datetime.now()
+        self.time_accumulator = self.time_init
+        self.n_runs = 0
+
+    def monitor_time_start(self):
+        self.time_start = datetime.datetime.now()
+        self.n_runs += 1
+
+    def monitor_time_end(self):
+        time_end = datetime.datetime.now()
+        time_delta = time_end - self.time_start
+        self.time_accumulator += time_delta
+
+    def print_time_performance(self):
+        time_delta_total = self.time_accumulator - self.time_init
+        time_average_s = time_delta_total.total_seconds() / self.n_runs
+        time_average_hz = 1. / time_average_s
+        print("\tAverage time performance, per tracking cycle:  {} [s], {} [Hz]".format(time_average_s, time_average_hz))
+
 
 
 class Video:
@@ -53,6 +76,7 @@ class Video:
     def get_bbox_gt(self, frame_counter):
         """
             Return two bboxes in format (u, v, width, height)
+
                                  (u,)   (u + width,)
                           (0,0)---.--------.---->
                             |
@@ -60,6 +84,7 @@ class Video:
                             |     |  bbox  |
               (,v + height) -     .________.
                             v
+
             Note: we assume that the gt coordinates are already set for the
                   rectified images, otherwise we would have to re-map these coordinates.
         """
@@ -240,7 +265,10 @@ class EAO_Rank:
         self.all_ss_len_max = max(self.all_ss_len_max, all_kps_ss_len_max)
         # Calculate the mean IoU scores, to create a single ss to used in the final EAO score
         mean_kpt_iou_scores = self.calculate_eao_curve(all_kps_ss, all_kps_ss_len_max)
+        # Uncomment the next line to print the mean IoU of that video
         #print("Case sample: {}, Kpt_id: {}, Mean IoU: {}".format(kss.case_sample_path, kss.kpt_id, mean_kpt_iou_scores))
+        # Uncomment the next line to print all the anchor IoUs of that video
+        #print(kss.kpt_all_ss)
         self.final_ss.append(mean_kpt_iou_scores)
 
 
@@ -286,6 +314,7 @@ class EAO_Rank:
         if not eao_curve:
             # If empty list
             return 0.0
+        print(eao_curve)
         eao_curve_N = eao_curve[self.N_min:self.N_max]
         # Remove any "is_difficult" score
         eao_curve_N_filt = [value for value in eao_curve_N if value != "ignore"]
@@ -303,14 +332,19 @@ class SSeq:
     def add_iou_score(self, iou):
         self.ss_iou_scores.append(iou)
 
+    def __repr__(self):
+        return "{}".format(self.ss_iou_scores)
+
 
 class KptSubSequences:
     """
        All the sub-sequences of a specific keypoint on a specific video.
          Example with a video of 1000 frames.
+
        (a) A sub-sequence is created when the tracker is initialized.
            The tracker is initialized at each anchor (the video is repeated for each anchor).
            And all the sub-sequences go until the TERMINATOR_FRAME (explained in (b)).
+
               (1) tracker initialized,
                   at the first anchor
                        |
@@ -323,9 +357,12 @@ class KptSubSequences:
                        |-------------------------------------> sub-sequence 1
                                     |
                                     |----------------------- > sub-sequence 2
+
        (b) All the sub-sequence stop at the TERMINATOR_FRAME.
+
            The TERMINATOR_FRAME, is the last frame of the video, for a specific keypoint,
              where we have a bbox that is both (i) visible, and (ii) not marked as difficult.
+
               (1) first anchor
                        |
                        |    (2) second
@@ -337,10 +374,13 @@ class KptSubSequences:
                        |----------------------------> sub-sequence 1
                                    |                |
                                    |----------------> sub-sequence 2
+
+
        (c) During the video a sub-sequence stores the IoU scores at each frame.
            If in a frame the bbox is not visible or is difficult it stores, `ignore` instead,
              so that this frame is ignored when calculating the final EAO score.
            When the bbox is marker as `is_difficult` it is also ignored.
+
               (1) first anchor
                        |
                        |      (2) bbox becomes
@@ -354,7 +394,9 @@ class KptSubSequences:
                        |------------x-------------x----------> sub-sequence 1
         IoU scores:    [1, 0.9...0.5, i, i, i... i,  0.4  0.3]
                                     | i = `ignore`|
+
         (d) If a tracker fails the rest the previous sub-sequence is padded with zeros.
+
               (1) first anchor
                        |
                        |            (2) tracker
@@ -366,6 +408,8 @@ class KptSubSequences:
                        |------------------x------------------> sub-sequence 1
         IoU scores 1:  [1,0.8...0.003,0.002, 0, 0,..., 0, 0, 0]
                                           |   zero padding   |
+
+
         The sub-sequences start with high scores, since
           sub-sequences are created when the tracker is initialized
     """
@@ -623,7 +667,7 @@ def draw_bb_in_frame(im1, im2, bbox1_gt, bbox1_p, bbox2_gt, bbox2_p, is_difficul
     return im_hstack
 
 
-def assess_anchor(config, tracker_type, v, anch, ar, kss, is_visualization_off):
+def assess_anchor(config, tracker_type, time, v, anch, ar, kss, is_visualization_off):
     # Create window for results animation
     if not is_visualization_off:
         # Parameters for visualization only! These parameters do not affect the results!
@@ -688,7 +732,9 @@ def assess_anchor(config, tracker_type, v, anch, ar, kss, is_visualization_off):
 
         if not is_track_fail_2d or not is_track_fail_3d:
             # Update the tracker
+            time.monitor_time_start()
             bbox1_p, bbox2_p = t.tracker_update(im1, im2)
+            time.monitor_time_end()
             if is_difficult:
                 # If `is_difficult` then the metrics are not be affected
                 pass
@@ -710,7 +756,7 @@ def assess_anchor(config, tracker_type, v, anch, ar, kss, is_visualization_off):
 
 
         # Show animation of the tracker
-        is_track_fail_both = is_track_fail_2d or flag_track_fail_3d
+        is_track_fail_both = is_track_fail_2d or is_track_fail_3d
         if not is_visualization_off and not is_track_fail_both:
             frame_aug = draw_bb_in_frame(im1, im2,
                                          bbox1_gt, bbox1_p,
@@ -731,7 +777,7 @@ def print_results(str_start, stats):
     print(message)
 
 
-def assess_keypoint(config, tracker_type, v, kpt_anchors, kss, stats_kpt, config_results, is_visualization_off):
+def assess_keypoint(config, tracker_type, time, v, kpt_anchors, kss, stats_kpt, config_results, is_visualization_off):
     """
         The keypoints are assessed throughout each video multiple times.
         Each time, the tracker is initialized at a different anchor points.
@@ -741,7 +787,7 @@ def assess_keypoint(config, tracker_type, v, kpt_anchors, kss, stats_kpt, config
                            config_results["iou_threshold"],
                            config_results["err_3d_threshold"],
                            v.Q)
-        assess_anchor(config, tracker_type, v, anch, ar, kss, is_visualization_off)
+        assess_anchor(config, tracker_type, time, v, anch, ar, kss, is_visualization_off)
         stats_anchor = Statistics() # To support multiple keypoints
         ar.get_full_metric(stats_anchor)
         print_results("\t\t\tAnchor {}, ".format(anch_id), stats_anchor)
@@ -752,7 +798,7 @@ def assess_keypoint(config, tracker_type, v, kpt_anchors, kss, stats_kpt, config
     stats_kpt.merge_stats()
 
 
-def calculate_results_for_video(config, tracker_type, rank, stats_video, anchors, case_sample_path, is_to_rectify, config_results, is_visualization_off):
+def calculate_results_for_video(config, tracker_type, time, rank, stats_video, anchors, case_sample_path, is_to_rectify, config_results, is_visualization_off):
     # Load video
     v = Video(case_sample_path, is_to_rectify)
     # Iterate through each keypoint (each keypoint that was labelled throughout a video)
@@ -764,7 +810,7 @@ def calculate_results_for_video(config, tracker_type, rank, stats_video, anchors
         terminator_frame = v.get_terminator_frame()
         kss = KptSubSequences(terminator_frame, case_sample_path, kpt_id)
         stats_kpt = Statistics() # Save score for a kpt, and all its anchors
-        assess_keypoint(config, tracker_type, v, kpt_anchors, kss, stats_kpt, config_results, is_visualization_off)
+        assess_keypoint(config, tracker_type, time, v, kpt_anchors, kss, stats_kpt, config_results, is_visualization_off)
         stats_video.append_stats(stats_kpt)
         rank.add_kpt_ss(kss)
     # Check that we have statistics for each of the keypoints
@@ -779,6 +825,7 @@ def calculate_results(config, tracker_type, valid_or_test, is_visualization_off)
     is_to_rectify = config["is_to_rectify"]
     config_data = config[valid_or_test]
 
+    time = Timer()
     rank = EAO_Rank(config_data["N_min"], config_data["N_max"])
     stats_case_all = Statistics() # For ALL cases
 
@@ -792,7 +839,7 @@ def calculate_results(config, tracker_type, valid_or_test, is_visualization_off)
             # Go through case sample (in other words, each video)
             for cs in case.case_samples:
                 stats_video = Statistics() # Statistics for a video of a case (specifically, for all the keypoints of a video)
-                calculate_results_for_video(config, tracker_type, rank, stats_video, cs.anchors, cs.case_sample_path, is_to_rectify, config_results, is_visualization_off)
+                calculate_results_for_video(config, tracker_type, time, rank, stats_video, cs.anchors, cs.case_sample_path, is_to_rectify, config_results, is_visualization_off)
                 print_results("\t\t{}".format(cs.case_sample_path), stats_video)
                 stats_case.append_stats(stats_video)
             # Get results for all the videos in the case
@@ -805,7 +852,7 @@ def calculate_results(config, tracker_type, valid_or_test, is_visualization_off)
         #rank.calculate_N_min_and_N_max() # Used by callenge organizers to get N_min and N_max for each dataset
         eao = rank.calculate_eao_score()
         print_results("\tEAO:{:.3f}".format(eao), stats_case_all)
-
+        time.print_time_performance()
 
 
 # function called from `main.py`!
